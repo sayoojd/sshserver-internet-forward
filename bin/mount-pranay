@@ -1,0 +1,8 @@
+#!/bin/bash
+if ! mountpoint -q /home/mauajama; then
+    sshfs pranaysir: /home/mauajama -o reconnect,ServerAliveInterval=15
+fi
+
+if ! mountpoint -q /data/mauajama; then
+    sshfs pranaysir:/data/mauajama /data/mauajama -o reconnect,ServerAliveInterval=15
+fi

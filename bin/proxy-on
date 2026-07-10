@@ -1,0 +1,3 @@
+#!/bin/bash
+touch "$HOME/.pranay_proxy_enabled"
+echo "Claude Code Proxy Mode: ENABLED (using localhost:18888)"

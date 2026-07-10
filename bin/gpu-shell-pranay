@@ -1,0 +1,48 @@
+#!/bin/sh
+LOCAL_DIR=$(pwd)
+
+case "$LOCAL_DIR" in
+    /home/mauajama*|/data/mauajama*)
+        REMOTE_DIR="$LOCAL_DIR"
+        ;;
+    *)
+        REMOTE_DIR="/home/mauajama"
+        ;;
+esac
+
+CMD=""
+INTERACTIVE=1
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -c)
+            CMD="$2"
+            INTERACTIVE=0
+            shift 2
+            ;;
+        -l|--login|-i|--interactive)
+            shift
+            ;;
+        *)
+            CMD="$*"
+            INTERACTIVE=0
+            break
+            ;;
+    esac
+done
+
+if [ -f "$HOME/.pranay_proxy_enabled" ]; then
+    PROXY_ENV="export http_proxy=http://127.0.0.1:18888; export https_proxy=http://127.0.0.1:18888; export HTTP_PROXY=http://127.0.0.1:18888; export HTTPS_PROXY=http://127.0.0.1:18888;"
+    if [ "$INTERACTIVE" -eq 1 ] || [ -z "$CMD" ]; then
+        exec ssh -R 18888:127.0.0.1:18888 -o ControlPath="~/.ssh/sockets/%r@%h-%p" -q -t pranaysir "cd '$REMOTE_DIR' && $PROXY_ENV exec bash"
+    else
+        exec ssh -R 18888:127.0.0.1:18888 -o ControlPath="~/.ssh/sockets/%r@%h-%p" -q -T pranaysir "cd '$REMOTE_DIR' && $PROXY_ENV $CMD"
+    fi
+else
+    UNSET_PROXY="unset http_proxy; unset https_proxy; unset HTTP_PROXY; unset HTTPS_PROXY;"
+    if [ "$INTERACTIVE" -eq 1 ] || [ -z "$CMD" ]; then
+        exec ssh -o ControlPath="~/.ssh/sockets/%r@%h-%p" -q -t pranaysir "cd '$REMOTE_DIR' && $UNSET_PROXY exec bash"
+    else
+        exec ssh -o ControlPath="~/.ssh/sockets/%r@%h-%p" -q -T pranaysir "cd '$REMOTE_DIR' && $UNSET_PROXY $CMD"
+    fi
+fi

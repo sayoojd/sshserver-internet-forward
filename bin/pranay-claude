@@ -1,0 +1,33 @@
+#!/bin/bash
+# If we are not already inside the namespace, run ourselves inside unshare
+if [ -z "$IN_GPU_NAMESPACE" ]; then
+    export IN_GPU_NAMESPACE=1
+    exec unshare -m -r "$0" "$@"
+fi
+
+# Ensure correct home directory and shell environment variables
+export HOME="/home/sayooj"
+export SHELL="/bin/bash"
+export CLAUDE_CODE_SHELL="/bin/bash"
+
+# Set proxy environment variables if enabled, otherwise explicitly unset them
+if [ -f "/home/sayooj/.pranay_proxy_enabled" ]; then
+    export http_proxy="http://127.0.0.1:18888"
+    export https_proxy="http://127.0.0.1:18888"
+    export HTTP_PROXY="http://127.0.0.1:18888"
+    export HTTPS_PROXY="http://127.0.0.1:18888"
+else
+    unset http_proxy
+    unset https_proxy
+    unset HTTP_PROXY
+    unset HTTPS_PROXY
+fi
+
+# Bind-mount the modified passwd file to redirect root home directory
+mount --bind "$HOME/.gemini/antigravity-ide/scratch/passwd" /etc/passwd
+
+# Bind-mount the shell wrapper over bash
+mount --bind "$HOME/bin/gpu-shell-pranay" /bin/bash
+
+# Launch the globally installed Claude Code
+exec claude "$@"
