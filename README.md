@@ -8,20 +8,20 @@ This diagram visualizes how HTTP/HTTPS requests and shell commands are routed be
 
 ```mermaid
 graph TD
-    subgraph Local Machine (Macbook)
+    subgraph local ["Local Machine (Macbook)"]
         LocalProxy[proxy.py - port 18888]
         Internet((Internet))
         LocalProxy --> Internet
     end
 
-    subgraph Jumpserver
+    subgraph jump ["Jumpserver"]
         Claude[Claude Code / pranay-claude]
         SSHTunnel[SSH Remote Forward - port 18888]
         Claude -->|HTTP/HTTPS API Calls| SSHTunnel
         SSHTunnel -->|Forwarded via SSH -R| LocalProxy
     end
 
-    subgraph Private GPU Server (pranaysir)
+    subgraph gpu ["Private GPU Server (pranaysir)"]
         RemoteShell[bash - commands executed]
         RemoteForward[SSH Reverse Forward - port 18888]
         Claude -->|Intercepted Bash Commands| RemoteShell
