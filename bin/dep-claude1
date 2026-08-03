@@ -1,0 +1,31 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ -z "${IN_DEP_NAMESPACE:-}" ]; then
+    export IN_DEP_NAMESPACE=1
+    exec unshare -m -r "$0" "$@"
+fi
+
+mount --make-rprivate /
+
+export HOME="/home/sayooj/.dep1"
+export SHELL="/bin/bash"
+export CLAUDE_CODE_SHELL="/bin/bash"
+export PATH="/home/sayooj/.local/bin:/home/sayooj/bin:$PATH"
+
+current_dir=$(pwd -P 2>/dev/null || true)
+case "$current_dir" in
+    /home/mauajama/Sayooj|/home/mauajama/Sayooj/*|\
+    /mnt/DATA/mauajama/Sayooj|/mnt/DATA/mauajama/Sayooj/*) ;;
+    *) cd /home/mauajama/Sayooj ;;
+esac
+
+for hidden_path in /home/mauajama/Sayooj_y /data/mauajama/Sayooj_y; do
+    if [ -d "$hidden_path" ]; then
+        mount -t tmpfs -o ro,size=4k,mode=000 tmpfs "$hidden_path"
+    fi
+done
+
+mount --bind "$HOME/passwd" /etc/passwd
+mount --bind "/home/sayooj/bin/gpu-shell-dep" /bin/bash
+exec claude --settings "$HOME/.claude/settings.json" "$@"

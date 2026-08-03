@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Bash(*)",
+      "WebSearch",
+      "WebSearch(*)",
+      "WebFetch",
+      "WebFetch(*)",
+      "ViewImage",
+      "MCP(*)",
+      "Subagent"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "hooks": {
+    "PermissionRequest": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/sayooj/bin/claude-allow-log-monitor",
+            "args": []
+          }
+        ]
+      }
+    ]
+  },
+  "model": "opus",
+  "sandbox": {
+    "enabled": false
+  },
+  "effortLevel": "low",
+  "tui": "fullscreen",
+  "theme": "auto"
+}

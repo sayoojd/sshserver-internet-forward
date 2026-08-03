@@ -1,0 +1,45 @@
+#!/bin/sh
+set -eu
+
+LOCAL_DIR=$(pwd -P)
+case "$LOCAL_DIR" in
+    /home/mauajama/Sayooj|/home/mauajama/Sayooj/*|\
+    /mnt/DATA/mauajama/Sayooj|/mnt/DATA/mauajama/Sayooj/*)
+        REMOTE_DIR="$LOCAL_DIR"
+        ;;
+    *)
+        echo "dep-codex: refusing to run Bash outside the dep roots" >&2
+        echo "Current directory: $LOCAL_DIR" >&2
+        exit 64
+        ;;
+esac
+
+CMD=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -c|-lc|-cl|-ilc|-lic|-lci|-icl|-cli|-cil)
+            [ "$#" -ge 2 ] || { echo "dep-codex: bash $1 requires a command" >&2; exit 64; }
+            CMD="$2"
+            break
+            ;;
+        -l|--login|-i|--interactive|--noprofile|--norc)
+            shift
+            ;;
+        *)
+            CMD="$*"
+            break
+            ;;
+    esac
+done
+
+quote_sh() {
+    printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+REMOTE_DIR_Q=$(quote_sh "$REMOTE_DIR")
+if [ -z "$CMD" ]; then
+    exec ssh -t dep "cd $REMOTE_DIR_Q && exec /bin/bash -l"
+fi
+
+CMD_Q=$(quote_sh "$CMD")
+exec ssh -T dep "cd $REMOTE_DIR_Q && exec /bin/bash -lc $CMD_Q"

@@ -1,12 +1,12 @@
 [Unit]
-Description=Mount pranaysir project directories via SSHFS
+Description=Mount dep project directories via SSHFS
 After=network-online.target
 Wants=network-online.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot
-ExecStart=%h/bin/mount-pranay
+ExecStart=%h/bin/mount-dep
 RemainAfterExit=yes
 Restart=on-failure
 RestartSec=15

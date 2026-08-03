@@ -1,0 +1,47 @@
+#!/bin/bash
+set -euo pipefail
+
+SOURCE_HOME="/home/sayooj/.codex"
+
+initialize_home() {
+    local server="$1"
+    local target="/home/sayooj/.codex-$server"
+
+    mkdir -p "$target"
+    chmod 700 "$target"
+
+    if [ ! -e "$target/config.toml" ]; then
+        cp "$SOURCE_HOME/config.toml" "$target/config.toml"
+        case "$server" in
+            dep)
+                printf '\n[projects."/home/mauajama/Sayooj"]\ntrust_level = "trusted"\n\n[projects."/mnt/DATA/mauajama/Sayooj"]\ntrust_level = "trusted"\n' >> "$target/config.toml"
+                ;;
+            pranay)
+                printf '\n[projects."/home/mauajama/Sayooj_y"]\ntrust_level = "trusted"\n\n[projects."/data/mauajama/Sayooj_y"]\ntrust_level = "trusted"\n' >> "$target/config.toml"
+                ;;
+        esac
+        chmod 600 "$target/config.toml"
+    fi
+
+    if [ ! -e "$target/auth.json" ]; then
+        cp "$SOURCE_HOME/auth.json" "$target/auth.json"
+        chmod 600 "$target/auth.json"
+    fi
+
+    if [ ! -e "$target/passwd" ]; then
+        cp /etc/passwd "$target/passwd"
+        sed -i 's|^root:x:0:0:root:[^:]*:|root:x:0:0:root:/home/sayooj:|' "$target/passwd"
+        chmod 600 "$target/passwd"
+    fi
+
+    for copied_dir in skills plugins; do
+        if [ -d "$SOURCE_HOME/$copied_dir" ] && [ ! -e "$target/$copied_dir" ]; then
+            cp -a "$SOURCE_HOME/$copied_dir" "$target/$copied_dir"
+        fi
+    done
+
+    echo "Initialized $target from the current global Codex setup"
+}
+
+initialize_home dep
+initialize_home pranay

@@ -1,0 +1,30 @@
+#!/bin/bash
+set -uo pipefail
+
+healthy() {
+    local target=$1
+    mountpoint -q "$target" && timeout 10 ls -A "$target" >/dev/null 2>&1
+}
+
+recover() {
+    local target=$1 unit=$2
+    healthy "$target" && return 0
+
+    echo "Recovering SSHFS mount: $target" >&2
+    if mountpoint -q "$target"; then
+        fusermount3 -uz "$target" || return 1
+    fi
+    systemctl --user restart "$unit" || return 1
+    for _ in {1..20}; do
+        healthy "$target" && return 0
+        sleep 0.5
+    done
+    return 1
+}
+
+status=0
+recover /home/mauajama/Sayooj_y claude-mount-pranay-home.service || status=1
+recover /data/mauajama/Sayooj_y claude-mount-pranay-data.service || status=1
+recover /home/mauajama/Sayooj claude-mount-dep-home.service || status=1
+recover /mnt/DATA/mauajama/Sayooj claude-mount-dep-data.service || status=1
+exit "$status"

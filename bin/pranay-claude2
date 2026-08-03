@@ -1,33 +1,34 @@
 #!/bin/bash
-# If we are not already inside the namespace, run ourselves inside unshare
-if [ -z "$IN_GPU_NAMESPACE" ]; then
-    export IN_GPU_NAMESPACE=1
+set -euo pipefail
+
+if [ -z "${IN_PRANAY_NAMESPACE:-}" ]; then
+    export IN_PRANAY_NAMESPACE=1
     exec unshare -m -r "$0" "$@"
 fi
 
-# Ensure correct home directory and shell environment variables
+mount --make-rprivate /
+
 export HOME="/home/sayooj/.pranay2"
 export SHELL="/bin/bash"
 export CLAUDE_CODE_SHELL="/bin/bash"
+export PATH="/home/sayooj/.local/bin:/home/sayooj/bin:$PATH"
 
-# Set proxy environment variables if enabled, otherwise explicitly unset them
-if [ -f "/home/sayooj/.pranay_proxy_enabled" ]; then
-    export http_proxy="http://127.0.0.1:18888"
-    export https_proxy="http://127.0.0.1:18888"
-    export HTTP_PROXY="http://127.0.0.1:18888"
-    export HTTPS_PROXY="http://127.0.0.1:18888"
-else
-    unset http_proxy
-    unset https_proxy
-    unset HTTP_PROXY
-    unset HTTPS_PROXY
+current_dir=$(pwd -P 2>/dev/null || true)
+case "$current_dir" in
+    /home/mauajama/Sayooj_y|/home/mauajama/Sayooj_y/*|\
+    /data/mauajama/Sayooj_y|/data/mauajama/Sayooj_y/*) ;;
+    *) cd /home/mauajama/Sayooj_y ;;
+esac
+
+for hidden_path in /home/mauajama/Sayooj /mnt/DATA/mauajama/Sayooj; do
+    if [ -d "$hidden_path" ]; then
+        mount -t tmpfs -o ro,size=4k,mode=000 tmpfs "$hidden_path"
+    fi
+done
+
+if [ -f "$HOME/passwd" ]; then
+    mount --bind "$HOME/passwd" /etc/passwd
 fi
 
-# Bind-mount the modified passwd file to redirect root home directory
-mount --bind "$HOME/passwd" /etc/passwd
-
-# Bind-mount the shell wrapper over bash
 mount --bind "/home/sayooj/bin/gpu-shell-pranay" /bin/bash
-
-# Launch the globally installed Claude Code
-exec claude "$@"
+exec claude --settings "$HOME/.claude/settings.json" "$@"

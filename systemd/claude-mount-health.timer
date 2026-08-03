@@ -1,0 +1,12 @@
+[Unit]
+Description=Periodically recover Claude SSHFS project mounts
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=60
+RandomizedDelaySec=5
+Persistent=true
+Unit=claude-mount-health.service
+
+[Install]
+WantedBy=timers.target

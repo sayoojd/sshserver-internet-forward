@@ -1,0 +1,100 @@
+#!/usr/bin/python3
+"""Auto-approve only read-only tail-follow pipelines under the SSH server roots."""
+
+import json
+import os
+import re
+import shlex
+import sys
+
+
+ROOT_GROUPS = (
+    ("/home/mauajama/Sayooj", "/mnt/DATA/mauajama/Sayooj"),
+    ("/home/mauajama/Sayooj_y", "/data/mauajama/Sayooj_y"),
+)
+
+
+def within(path: str, roots: tuple[str, ...]) -> bool:
+    path = os.path.normpath(path)
+    return any(path == root or path.startswith(root + "/") for root in roots)
+
+
+def approve() -> None:
+    json.dump(
+        {
+            "hookSpecificOutput": {
+                "hookEventName": "PermissionRequest",
+                "decision": {"behavior": "allow"},
+            }
+        },
+        sys.stdout,
+    )
+
+
+def main() -> None:
+    try:
+        event = json.load(sys.stdin)
+        if event.get("tool_name") != "Bash":
+            return
+        command = event.get("tool_input", {}).get("command", "")
+
+        # These constructs can introduce writes or hidden commands. Leave them
+        # to Claude's normal permission prompt instead of attempting to parse.
+        if any(token in command for token in ("$(", "`", ">", "<", "&&", "||", ";", "|&")):
+            return
+
+        lines = [line.strip() for line in command.splitlines() if line.strip()]
+        if not lines:
+            return
+
+        cwd = event.get("cwd", "")
+        roots = next((group for group in ROOT_GROUPS if within(cwd, group)), None)
+
+        if lines[0].startswith("cd "):
+            cd_parts = shlex.split(lines.pop(0))
+            if len(cd_parts) != 2 or cd_parts[0] != "cd":
+                return
+            roots = next((group for group in ROOT_GROUPS if within(cd_parts[1], group)), None)
+
+        if roots is None:
+            return
+
+        variables: dict[str, str] = {}
+        while lines and re.fullmatch(r"[A-Z_][A-Z0-9_]*=.*", lines[0]):
+            name, value = lines.pop(0).split("=", 1)
+            parsed = shlex.split(value)
+            if len(parsed) != 1 or not parsed[0].startswith("/") or not within(parsed[0], roots):
+                return
+            variables[name] = parsed[0]
+
+        if len(lines) != 1:
+            return
+
+        lexer = shlex.shlex(lines[0], posix=True, punctuation_chars="|")
+        lexer.whitespace_split = True
+        pipeline = list(lexer)
+        if pipeline.count("|") != 1:
+            return
+        separator = pipeline.index("|")
+        tail_args = pipeline[:separator]
+        grep_args = pipeline[separator + 1 :]
+
+        if len(tail_args) != 5 or tail_args[:4] != ["tail", "-f", "-n", "+1"]:
+            return
+        source = tail_args[4]
+        if source.startswith("$"):
+            source = variables.get(source[1:], "")
+        if not source or not within(source, roots):
+            return
+
+        if len(grep_args) != 4 or grep_args[:3] != ["grep", "-E", "--line-buffered"]:
+            return
+
+        approve()
+    except (ValueError, TypeError, shlex.Error):
+        # No decision means Claude falls back to the normal permission prompt.
+        return
+
+
+if __name__ == "__main__":
+    main()

@@ -1,106 +1,71 @@
-# Claude Jumpserver Proxy Setup
+# GPU server mirroring to Claude Code and Codex from a local workstation
 
-A secure, offline-compatible proxy wrapper system that allows running [Claude Code](https://github.com/anthropics/claude-code) on a headless jumpserver while executing commands remotely on a private GPU server and tunneling internet access via a local Mac connection.
+Claude Code runs on the local workstation, reads and edits remote files through
+SSHFS, and sends Bash commands to the server that owns the current project.
 
-## Architecture
+## Mirrored mounts
 
-This diagram visualizes how HTTP/HTTPS requests and shell commands are routed between your local machine, the jumpserver, and the private GPU server:
+| Server | Local and remote path |
+| --- | --- |
+| `dep` | `/home/mauajama/Sayooj` |
+| `dep` | `/mnt/DATA/mauajama/Sayooj` |
+| `pranaysir` | `/home/mauajama/Sayooj_y` |
+| `pranaysir` | `/data/mauajama/Sayooj_y` |
 
-```mermaid
-graph TD
-    subgraph local ["Local Machine (Macbook)"]
-        LocalProxy[proxy.py - port 18888]
-        Internet((Internet))
-        LocalProxy --> Internet
-    end
+`/home/mauajama` and `/data/mauajama` are ordinary local parent directories.
+The four project directories are independent SSHFS mounts and can remain active
+at the same time.
 
-    subgraph jump ["Jumpserver"]
-        Claude[Claude Code / pranay-claude]
-        SSHTunnel[SSH Remote Forward - port 18888]
-        Claude -->|HTTP/HTTPS API Calls| SSHTunnel
-        SSHTunnel -->|Forwarded via SSH -R| LocalProxy
-    end
+`/home/sayooj/machines/dep` is a local symlink to `/home/mauajama/Sayooj`.
+The older `sshfs-dep.service` whole-home mount is disabled, avoiding a second
+connection and a duplicate view of the same Dep files.
 
-    subgraph gpu ["Private GPU Server (pranaysir)"]
-        RemoteShell[bash - commands executed]
-        RemoteForward[SSH Reverse Forward - port 18888]
-        Claude -->|Intercepted Bash Commands| RemoteShell
-        RemoteShell -->|Command network requests| RemoteForward
-        RemoteForward -->|Forwarded via SSH -R| SSHTunnel
-    end
-```
+## Claude launchers
 
-## Features
+- `pranay-claude` or `pranay-claude1`: primary Pranay account
+- `pranay-claude2`: isolated secondary Pranay account
+- `dep-claude1`: isolated Dep account 1
+- `dep-claude2`: isolated Dep account 2
 
-1.  **Isolated Claude Accounts:** Support for multiple separate accounts (`pranay-claude` and `pranay-claude2`) running on the same jumpserver with isolated tokens/history/settings.
-2.  **SSH Shell Proxying:** All shell operations are run remotely on `pranaysir` (the private GPU server) instead of local execution on the jumpserver, while sharing the same file paths.
-3.  **Flexible Proxy Forwarding:** Easily toggle between direct internet access (when jumpserver network is working) and local proxy tunnel forwarding (when offline/behind a firewall).
-4.  **Automatic SSHFS Mount Recovery:** Automatically mounts `pranaysir` drives on boot using a systemd user unit.
-5.  **DNS Fallback Resolution:** Built-in DNS resolver inside `proxy.py` that queries public DNS (`8.8.8.8`) directly if Tailscale or local network DNS fails.
+Each launcher uses a private mount namespace. Pranay launchers cover the Dep
+mounts with read-only empty filesystems, while Dep launchers similarly cover the
+Pranay mounts. These namespace-only mounts do not affect the host or concurrent
+Claude sessions.
 
----
+Launchers started outside their server's approved roots enter that server's home
+project automatically. Their explicit settings files use the permission
+allowlists from `inst:~/Sayooj/tools/claude`; they do not use bypassPermissions.
 
-## Installation & Setup
+The corresponding shell wrapper also rejects commands when the current working
+directory is outside that server's two approved roots. This prevents a Claude
+session from reading through one server's SSHFS mount while executing commands
+on the other server.
 
-### Step 1: Local Machine Configuration (Macbook)
+## Codex launchers
 
-1.  Keep the `proxy.py` file on your local machine.
-2.  Run the proxy locally on port `18888`:
-    ```bash
-    python3 proxy.py 18888
-    ```
-3.  Log in to the jumpserver using SSH remote port forwarding:
-    ```bash
-    ssh -R 18888:127.0.0.1:18888 jumpserver
-    ```
+- `pranay-codex`: isolated Codex environment for `pranaysir`
+- `dep-codex`: isolated Codex environment for `dep`
 
-### Step 2: Jumpserver Configuration
+Codex uses its supported `CODEX_HOME` mechanism: `/home/sayooj/.codex-pranay`
+and `/home/sayooj/.codex-dep` are independent copies of the workstation's
+global config, authentication, skills, and plugins. Session history, logs,
+caches, and mutable state are separate. Both launchers reuse the global Codex
+executable, so its large package is not duplicated and global Codex upgrades
+apply to both launchers.
 
-1.  Clone this repository or copy its contents onto the jumpserver.
-2.  Run the automated installer script:
-    ```bash
-    chmod +x install.sh
-    ./install.sh
-    ```
+The Codex launchers have dedicated SSH shell routers that understand Codex's
+`bash -lc` command form. They disable shell snapshots at launch because the
+generated files exist locally and cannot be sourced by the remote shell. Server
+mount visibility and working-directory isolation are the same as for the Claude
+launchers.
 
----
+## Services
 
-## Usage Guide
+- Four `claude-mount-<server>-<home|data>.service` units independently own the
+  four SSHFS processes. Recovering one mount never replaces its sibling mount.
+- `claude-mount-health.timer` checks all four paths every minute and repairs a
+  missing or stale SSHFS mount.
 
-### 1. Toggling Proxy Mode
-Use these simple commands on the jumpserver to enable or disable internet tunneling:
-
-*   **To use jumpserver's direct internet connection (Default):**
-    ```bash
-    proxy-off
-    ```
-*   **To tunnel internet from your local machine (when jumpserver network is blocked):**
-    ```bash
-    proxy-on
-    ```
-
-### 2. Running Claude Code
-*   **Account 1 (Primary):**
-    ```bash
-    pranay-claude
-    ```
-*   **Account 2 (Secondary):**
-    ```bash
-    pranay-claude2
-    ```
-
-### 3. Log in / Authenticating a Second Account
-To log in with your second account (when using `pranay-claude2`), run:
-```bash
-pranay-claude2 auth
-```
-
----
-
-## Component Details
-
-*   **`proxy.py`**: Local HTTP/HTTPS proxy with fallback DNS client.
-*   **`pranay-claude` & `pranay-claude2`**: Unshare-namespace wrapper scripts that redirect user accounts and proxy states.
-*   **`gpu-shell-pranay`**: Remote shell executor that routes commands via SSH to `pranaysir`.
-*   **`mount-pranay`**: Idempotent shell script to safely mount sshfs directories.
-*   **`mount-pranay.service`**: Systemd user service configuration to manage boot mounts.
+The mount services retry boot-time failures, and user lingering starts them even
+before an interactive login. Run `./install.sh` to deploy the scripts, account
+directories, and service units.

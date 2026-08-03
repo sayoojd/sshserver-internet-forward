@@ -1,0 +1,17 @@
+[Unit]
+Description=SSHFS pranaysir data project
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/sshfs -f pranaysir:/data/mauajama/Sayooj_y /data/mauajama/Sayooj_y -o reconnect,ServerAliveInterval=15,ServerAliveCountMax=3,BatchMode=yes,ConnectTimeout=10
+ExecStop=-/bin/fusermount3 -u /data/mauajama/Sayooj_y
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=30
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

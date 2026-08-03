@@ -1,0 +1,9 @@
+[Unit]
+Description=Check and recover Claude SSHFS project mounts
+After=network-online.target claude-mount-pranay-home.service claude-mount-pranay-data.service claude-mount-dep-home.service claude-mount-dep-data.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/bin/check-claude-mounts
+TimeoutStartSec=90

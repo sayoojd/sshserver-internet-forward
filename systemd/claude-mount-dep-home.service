@@ -1,0 +1,17 @@
+[Unit]
+Description=SSHFS dep home project
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/sshfs -f dep:/home/mauajama/Sayooj /home/mauajama/Sayooj -o reconnect,ServerAliveInterval=15,ServerAliveCountMax=3,BatchMode=yes,ConnectTimeout=10
+ExecStop=-/bin/fusermount3 -u /home/mauajama/Sayooj
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=30
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

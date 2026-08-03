@@ -1,0 +1,46 @@
+#!/bin/sh
+set -eu
+
+LOCAL_DIR=$(pwd -P)
+
+case "$LOCAL_DIR" in
+    /home/mauajama/Sayooj|/home/mauajama/Sayooj/*|\
+    /mnt/DATA/mauajama/Sayooj|/mnt/DATA/mauajama/Sayooj/*)
+        REMOTE_DIR="$LOCAL_DIR"
+        ;;
+    *)
+        echo "dep-claude: refusing to run Bash outside the dep roots:" >&2
+        echo "  /home/mauajama/Sayooj" >&2
+        echo "  /mnt/DATA/mauajama/Sayooj" >&2
+        echo "Current directory: $LOCAL_DIR" >&2
+        exit 64
+        ;;
+esac
+
+CMD=""
+INTERACTIVE=1
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -c)
+            [ "$#" -ge 2 ] || { echo "dep-claude: bash -c requires a command" >&2; exit 64; }
+            CMD="$2"
+            INTERACTIVE=0
+            shift 2
+            ;;
+        -l|--login|-i|--interactive)
+            shift
+            ;;
+        *)
+            CMD="$*"
+            INTERACTIVE=0
+            break
+            ;;
+    esac
+done
+
+if [ "$INTERACTIVE" -eq 1 ] || [ -z "$CMD" ]; then
+    exec ssh -q -t dep "cd $(printf '%s' "$REMOTE_DIR" | sed "s/'/'\\\\''/g; s/^/'/; s/$/'/") && exec bash"
+else
+    exec ssh -q -T dep "cd $(printf '%s' "$REMOTE_DIR" | sed "s/'/'\\\\''/g; s/^/'/; s/$/'/") && $CMD"
+fi

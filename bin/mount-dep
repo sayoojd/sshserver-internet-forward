@@ -18,5 +18,5 @@ mount_one() {
 BatchMode=yes,ConnectTimeout=10
 }
 
-mount_one pranaysir:/home/mauajama/Sayooj_y /home/mauajama/Sayooj_y
-mount_one pranaysir:/data/mauajama/Sayooj_y /data/mauajama/Sayooj_y
+mount_one dep:/home/mauajama/Sayooj /home/mauajama/Sayooj
+mount_one dep:/mnt/DATA/mauajama/Sayooj /mnt/DATA/mauajama/Sayooj
