@@ -30,6 +30,8 @@ because command routing depends on them being identical locally and remotely.
 - `pranay-claude1`, `pranay-claude2`, `dep-claude1`, and `dep-claude2` with
   isolated Claude homes/settings as appropriate.
 - `pranay-codex` and `dep-codex` with separate `CODEX_HOME` state.
+- `claude2` as a second, fully local Claude account with isolated configuration
+  and history but the normal workstation filesystem and shell.
 - Private mount namespaces that hide the other server from each agent session.
 - Bash routing to the correct SSH host while preserving the absolute cwd.
 - A narrowly validated permission hook for read-only `tail -f | grep` monitors.
@@ -182,6 +184,7 @@ pranay-codex login
 
 ```bash
 # Claude Code
+claude2                    # second local account; no SSH routing
 pranay-claude1
 pranay-claude2
 dep-claude1
@@ -197,6 +200,25 @@ dep-claude1 --continue
 pranay-codex resume
 dep-codex resume
 ```
+
+### Second local Claude account
+
+`claude2` is independent of the normal `claude` login. It uses
+`~/.claude2` through Claude Code's `CLAUDE_CONFIG_DIR` mechanism while keeping
+the normal `$HOME`, current working directory, local filesystem, and local
+shell. It does not enter a mount namespace and never forwards commands over
+SSH.
+
+Authenticate it once with:
+
+```bash
+claude2 auth login
+```
+
+Thereafter, use `claude2`, `claude2 --continue`, and `claude2 --resume` in the
+same way as the normal local `claude` command. The installer copies the normal
+settings template into the second account but never copies credentials,
+conversations, or runtime state.
 
 Starting a launcher outside its allowed roots moves it to that server's home
 project root. Starting it inside either allowed root preserves the current

@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+
+# Keep the normal workstation HOME, cwd, filesystem view, and local shell.
+# CLAUDE_CONFIG_DIR is Claude Code's supported boundary for a separate login,
+# settings, history, plugins, and runtime state.
+LOCAL_HOME=${GPU_MIRROR_LOCAL_HOME:-$HOME}
+CONFIG_DIR="$LOCAL_HOME/.claude2"
+CLAUDE_BIN="$LOCAL_HOME/.local/bin/claude"
+
+[ -d "$CONFIG_DIR" ] || {
+    echo "claude2: missing $CONFIG_DIR; run the framework installer first" >&2
+    exit 1
+}
+
+[ -x "$CLAUDE_BIN" ] || {
+    echo "claude2: Claude Code executable not found at $CLAUDE_BIN" >&2
+    exit 1
+}
+
+export CLAUDE_CONFIG_DIR="$CONFIG_DIR"
+exec "$CLAUDE_BIN" "$@"

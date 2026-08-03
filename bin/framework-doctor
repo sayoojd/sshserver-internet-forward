@@ -91,13 +91,19 @@ for source_file in "$HOME/.codex/config.toml" "$HOME/.codex/auth.json" \
 done
 
 if [ "$mode" != "--pre-install" ]; then
-    for launcher in dep-claude1 dep-claude2 pranay-claude1 pranay-claude2 dep-codex pranay-codex; do
+    for launcher in claude2 dep-claude1 dep-claude2 pranay-claude1 pranay-claude2 dep-codex pranay-codex; do
         if command -v "$launcher" >/dev/null 2>&1; then
             pass "launcher installed: $launcher"
         else
             fail "launcher missing from PATH: $launcher"
         fi
     done
+
+    if [ -f "$HOME/.claude2/settings.json" ]; then
+        pass "isolated local Claude account ready: $HOME/.claude2"
+    else
+        fail "isolated local Claude account incomplete: $HOME/.claude2"
+    fi
 
     units=(
         claude-mount-dep-home.service

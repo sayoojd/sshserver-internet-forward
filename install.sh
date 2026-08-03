@@ -16,6 +16,7 @@ echo "Running clean-machine preflight checks..."
 
 mkdir -p "$HOME/bin"
 scripts=(
+    claude2
     pranay-claude pranay-claude1 pranay-claude2
     dep-claude1 dep-claude2
     gpu-shell-pranay gpu-shell-dep
@@ -38,7 +39,8 @@ esac
 # is deliberately not stored in the repository; each isolated account can be
 # authenticated after installation.
 account_homes=("$HOME/.pranay1" "$HOME/.pranay2" "$HOME/.dep1" "$HOME/.dep2")
-mkdir -p "$HOME/.claude"
+mkdir -p "$HOME/.claude" "$HOME/.claude2"
+chmod 0700 "$HOME/.claude2"
 for account_home in "${account_homes[@]}"; do
     mkdir -p "$account_home/.claude"
     chmod 0700 "$account_home"
@@ -55,6 +57,7 @@ install_claude_settings() {
 }
 
 install_claude_settings "$SCRIPT_DIR/config/claude-settings-primary.json" "$HOME/.claude/settings.json"
+install_claude_settings "$SCRIPT_DIR/config/claude-settings-primary.json" "$HOME/.claude2/settings.json"
 install_claude_settings "$SCRIPT_DIR/config/claude-settings-secondary.json" "$HOME/.pranay2/.claude/settings.json"
 install_claude_settings "$SCRIPT_DIR/config/claude-settings-primary.json" "$HOME/.dep1/.claude/settings.json"
 install_claude_settings "$SCRIPT_DIR/config/claude-settings-secondary.json" "$HOME/.dep2/.claude/settings.json"
@@ -121,9 +124,10 @@ echo "=== Verifying installed framework ==="
 
 echo
 echo "Installation complete. Authenticate any Claude account that is not already signed in:"
+echo "  claude2 auth login"
 echo "  pranay-claude auth"
 echo "  pranay-claude2 auth"
 echo "  dep-claude1 auth"
 echo "  dep-claude2 auth"
 echo
-echo "Launchers: pranay-claude[1|2], dep-claude[1|2], pranay-codex, dep-codex"
+echo "Launchers: claude2, pranay-claude[1|2], dep-claude[1|2], pranay-codex, dep-codex"
