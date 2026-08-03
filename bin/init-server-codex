@@ -1,11 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-SOURCE_HOME="/home/sayooj/.codex"
+LOCAL_HOME="${GPU_MIRROR_LOCAL_HOME:-$HOME}"
+SOURCE_HOME="$LOCAL_HOME/.codex"
 
 initialize_home() {
     local server="$1"
-    local target="/home/sayooj/.codex-$server"
+    local target="$LOCAL_HOME/.codex-$server"
 
     mkdir -p "$target"
     chmod 700 "$target"
@@ -14,10 +15,16 @@ initialize_home() {
         cp "$SOURCE_HOME/config.toml" "$target/config.toml"
         case "$server" in
             dep)
-                printf '\n[projects."/home/mauajama/Sayooj"]\ntrust_level = "trusted"\n\n[projects."/mnt/DATA/mauajama/Sayooj"]\ntrust_level = "trusted"\n' >> "$target/config.toml"
+                grep -Fq '[projects."/home/mauajama/Sayooj"]' "$target/config.toml" || \
+                    printf '\n[projects."/home/mauajama/Sayooj"]\ntrust_level = "trusted"\n' >> "$target/config.toml"
+                grep -Fq '[projects."/mnt/DATA/mauajama/Sayooj"]' "$target/config.toml" || \
+                    printf '\n[projects."/mnt/DATA/mauajama/Sayooj"]\ntrust_level = "trusted"\n' >> "$target/config.toml"
                 ;;
             pranay)
-                printf '\n[projects."/home/mauajama/Sayooj_y"]\ntrust_level = "trusted"\n\n[projects."/data/mauajama/Sayooj_y"]\ntrust_level = "trusted"\n' >> "$target/config.toml"
+                grep -Fq '[projects."/home/mauajama/Sayooj_y"]' "$target/config.toml" || \
+                    printf '\n[projects."/home/mauajama/Sayooj_y"]\ntrust_level = "trusted"\n' >> "$target/config.toml"
+                grep -Fq '[projects."/data/mauajama/Sayooj_y"]' "$target/config.toml" || \
+                    printf '\n[projects."/data/mauajama/Sayooj_y"]\ntrust_level = "trusted"\n' >> "$target/config.toml"
                 ;;
         esac
         chmod 600 "$target/config.toml"
@@ -28,11 +35,9 @@ initialize_home() {
         chmod 600 "$target/auth.json"
     fi
 
-    if [ ! -e "$target/passwd" ]; then
-        cp /etc/passwd "$target/passwd"
-        sed -i 's|^root:x:0:0:root:[^:]*:|root:x:0:0:root:/home/sayooj:|' "$target/passwd"
-        chmod 600 "$target/passwd"
-    fi
+    cp /etc/passwd "$target/passwd"
+    sed -i "s|^root:x:0:0:root:[^:]*:|root:x:0:0:root:$LOCAL_HOME:|" "$target/passwd"
+    chmod 600 "$target/passwd"
 
     for copied_dir in skills plugins; do
         if [ -d "$SOURCE_HOME/$copied_dir" ] && [ ! -e "$target/$copied_dir" ]; then

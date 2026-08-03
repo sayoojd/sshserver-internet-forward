@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+# systemd user managers often have a minimal PATH; support both user-local and
+# distribution package locations without hardcoding either executable.
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
+
+[ "$#" -eq 2 ] || {
+    echo "Usage: sshfs-mount <ssh-alias:/remote/path> <local-mountpoint>" >&2
+    exit 64
+}
+
+source_path=$1
+target_path=$2
+sshfs_bin=$(command -v sshfs) || {
+    echo "sshfs-mount: sshfs is not installed or not in PATH" >&2
+    exit 127
+}
+
+[ -d "$target_path" ] || {
+    echo "sshfs-mount: missing mountpoint: $target_path" >&2
+    exit 1
+}
+
+exec "$sshfs_bin" -f "$source_path" "$target_path" \
+    -o reconnect,ServerAliveInterval=15,ServerAliveCountMax=3,\
+BatchMode=yes,ConnectTimeout=10

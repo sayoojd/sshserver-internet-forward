@@ -1,0 +1,18 @@
+# Merge these entries into ~/.ssh/config and replace the CHANGE_ME values.
+# The aliases themselves (dep and pranaysir) are part of the framework contract.
+
+Host dep
+    HostName CHANGE_ME_DEP_HOSTNAME_OR_IP
+    User CHANGE_ME_DEP_USER
+    IdentityFile ~/.ssh/CHANGE_ME_PRIVATE_KEY
+    IdentitiesOnly yes
+    ServerAliveInterval 15
+    ServerAliveCountMax 3
+
+Host pranaysir
+    HostName CHANGE_ME_PRANAY_HOSTNAME_OR_IP
+    User CHANGE_ME_PRANAY_USER
+    IdentityFile ~/.ssh/CHANGE_ME_PRIVATE_KEY
+    IdentitiesOnly yes
+    ServerAliveInterval 15
+    ServerAliveCountMax 3

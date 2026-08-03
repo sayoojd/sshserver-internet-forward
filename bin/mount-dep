@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
-export PATH="/home/sayooj/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
 
 mount_one() {
     local source=$1 target=$2

@@ -6,7 +6,7 @@ StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/sshfs -f dep:/home/mauajama/Sayooj /home/mauajama/Sayooj -o reconnect,ServerAliveInterval=15,ServerAliveCountMax=3,BatchMode=yes,ConnectTimeout=10
+ExecStart=%h/bin/sshfs-mount dep:/home/mauajama/Sayooj /home/mauajama/Sayooj
 ExecStop=-/bin/fusermount3 -u /home/mauajama/Sayooj
 Restart=on-failure
 RestartSec=15

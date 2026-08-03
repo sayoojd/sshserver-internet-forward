@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+export GPU_MIRROR_LOCAL_HOME="${GPU_MIRROR_LOCAL_HOME:-$HOME}"
+LOCAL_HOME="$GPU_MIRROR_LOCAL_HOME"
+
 if [ -z "${IN_DEP_CODEX_NAMESPACE:-}" ]; then
     export IN_DEP_CODEX_NAMESPACE=1
     exec unshare -m -r "$0" "$@"
@@ -9,10 +12,10 @@ fi
 # Keep all namespace-only overlays private to this Codex process tree.
 mount --make-rprivate /
 
-export HOME="/home/sayooj"
-export CODEX_HOME="/home/sayooj/.codex-dep"
+export HOME="$LOCAL_HOME"
+export CODEX_HOME="$LOCAL_HOME/.codex-dep"
 export SHELL="/bin/bash"
-export PATH="/home/sayooj/.local/bin:/home/sayooj/bin:$PATH"
+export PATH="$LOCAL_HOME/.local/bin:$LOCAL_HOME/bin:$PATH"
 
 current_dir=$(pwd -P 2>/dev/null || true)
 case "$current_dir" in
@@ -38,7 +41,7 @@ done
     exit 1
 }
 
-REAL_CODEX="/home/sayooj/.codex/packages/standalone/current/bin/codex"
+REAL_CODEX="$LOCAL_HOME/.codex/packages/standalone/current/bin/codex"
 [ -x "$REAL_CODEX" ] || {
     echo "dep-codex: global Codex executable not found at $REAL_CODEX" >&2
     exit 1
@@ -47,5 +50,5 @@ REAL_CODEX="/home/sayooj/.codex/packages/standalone/current/bin/codex"
 # The user-facing codex command is a Bash script. Execute the real ELF before
 # replacing /bin/bash, otherwise the launcher itself would be sent over SSH.
 mount --bind "$CODEX_HOME/passwd" /etc/passwd
-mount --bind "/home/sayooj/bin/gpu-shell-codex-dep" /bin/bash
+mount --bind "$LOCAL_HOME/bin/gpu-shell-codex-dep" /bin/bash
 exec -a python3-manager "$REAL_CODEX" -c features.shell_snapshot=false "$@"

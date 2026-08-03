@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+export GPU_MIRROR_LOCAL_HOME="${GPU_MIRROR_LOCAL_HOME:-$HOME}"
+LOCAL_HOME="$GPU_MIRROR_LOCAL_HOME"
+
 if [ -z "${IN_PRANAY_NAMESPACE:-}" ]; then
     export IN_PRANAY_NAMESPACE=1
     exec unshare -m -r "$0" "$@"
@@ -9,10 +12,10 @@ fi
 # Prevent mount changes in this Claude session from propagating to the host.
 mount --make-rprivate /
 
-export HOME="/home/sayooj"
+export HOME="$LOCAL_HOME"
 export SHELL="/bin/bash"
 export CLAUDE_CODE_SHELL="/bin/bash"
-export PATH="/home/sayooj/.local/bin:$HOME/bin:$PATH"
+export PATH="$LOCAL_HOME/.local/bin:$LOCAL_HOME/bin:$PATH"
 
 current_dir=$(pwd -P 2>/dev/null || true)
 case "$current_dir" in
@@ -32,5 +35,5 @@ if [ -f "$HOME/.pranay1/passwd" ]; then
     mount --bind "$HOME/.pranay1/passwd" /etc/passwd
 fi
 
-mount --bind "$HOME/bin/gpu-shell-pranay" /bin/bash
+mount --bind "$LOCAL_HOME/bin/gpu-shell-pranay" /bin/bash
 exec claude --settings "$HOME/.claude/settings.json" "$@"

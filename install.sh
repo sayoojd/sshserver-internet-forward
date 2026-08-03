@@ -1,142 +1,129 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "=== Claude Jumpserver Setup Installer ==="
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
 
-# 1. Create bin directory
+[ "$(id -u)" -ne 0 ] || {
+    echo "Run ./install.sh as your normal workstation user, not with sudo." >&2
+    exit 1
+}
+
+echo "=== GPU server mirroring setup ==="
+echo "Running clean-machine preflight checks..."
+"$SCRIPT_DIR/bin/framework-doctor" --pre-install
+[ "${1:-}" != "--preflight" ] || exit 0
+
 mkdir -p "$HOME/bin"
+scripts=(
+    pranay-claude pranay-claude1 pranay-claude2
+    dep-claude1 dep-claude2
+    gpu-shell-pranay gpu-shell-dep
+    pranay-codex dep-codex
+    gpu-shell-codex-pranay gpu-shell-codex-dep
+    mount-pranay mount-dep sshfs-mount check-claude-mounts
+    claude-allow-log-monitor init-server-codex framework-doctor
+)
+for script_name in "${scripts[@]}"; do
+    install -m 0755 "$SCRIPT_DIR/bin/$script_name" "$HOME/bin/$script_name"
+done
+echo "Installed launchers and helpers in $HOME/bin"
 
-# 2. Copy scripts
-cp bin/pranay-claude "$HOME/bin/pranay-claude"
-cp bin/pranay-claude1 "$HOME/bin/pranay-claude1"
-cp bin/pranay-claude2 "$HOME/bin/pranay-claude2"
-cp bin/gpu-shell-pranay "$HOME/bin/gpu-shell-pranay"
-cp bin/mount-pranay "$HOME/bin/mount-pranay"
-cp bin/dep-claude1 "$HOME/bin/dep-claude1"
-cp bin/dep-claude2 "$HOME/bin/dep-claude2"
-cp bin/gpu-shell-dep "$HOME/bin/gpu-shell-dep"
-cp bin/mount-dep "$HOME/bin/mount-dep"
-cp bin/check-claude-mounts "$HOME/bin/check-claude-mounts"
-cp bin/claude-allow-log-monitor "$HOME/bin/claude-allow-log-monitor"
-cp bin/dep-codex "$HOME/bin/dep-codex"
-cp bin/pranay-codex "$HOME/bin/pranay-codex"
-cp bin/gpu-shell-codex-dep "$HOME/bin/gpu-shell-codex-dep"
-cp bin/gpu-shell-codex-pranay "$HOME/bin/gpu-shell-codex-pranay"
-cp bin/init-server-codex "$HOME/bin/init-server-codex"
+case ":$PATH:" in
+    *":$HOME/bin:"*) ;;
+    *) echo "WARNING: add $HOME/bin to PATH before using the launchers." >&2 ;;
+esac
 
-chmod +x "$HOME/bin/pranay-claude" \
-         "$HOME/bin/pranay-claude1" \
-         "$HOME/bin/pranay-claude2" \
-         "$HOME/bin/gpu-shell-pranay" \
-         "$HOME/bin/mount-pranay" \
-         "$HOME/bin/dep-claude1" \
-         "$HOME/bin/dep-claude2" \
-         "$HOME/bin/gpu-shell-dep" \
-         "$HOME/bin/mount-dep" \
-         "$HOME/bin/check-claude-mounts" \
-         "$HOME/bin/claude-allow-log-monitor" \
-         "$HOME/bin/dep-codex" \
-         "$HOME/bin/pranay-codex" \
-         "$HOME/bin/gpu-shell-codex-dep" \
-         "$HOME/bin/gpu-shell-codex-pranay" \
-         "$HOME/bin/init-server-codex"
-
-echo "✔ Copied scripts to $HOME/bin"
-
-# Codex officially supports CODEX_HOME for isolated configuration and state.
-# Copy setup/auth/skills/plugins once; keep logs and sessions independent.
-"$HOME/bin/init-server-codex"
-
-# 3. Create isolated home directories for accounts
-mkdir -p "$HOME/.pranay1"
-mkdir -p "$HOME/.pranay2"
-mkdir -p "$HOME/.dep1"
-mkdir -p "$HOME/.dep2"
-chmod 700 "$HOME/.pranay1" "$HOME/.pranay2" \
-          "$HOME/.dep1" "$HOME/.dep2"
-mkdir -p "$HOME/.claude" "$HOME/.pranay2/.claude" \
-         "$HOME/.dep1/.claude" "$HOME/.dep2/.claude"
-
-# Use the permission allowlists from inst:~/Sayooj/tools/claude rather than
-# bypassPermissions, which Claude refuses inside the root-mapped namespace.
-cp config/claude-settings-primary.json "$HOME/.claude/settings.json"
-cp config/claude-settings-secondary.json "$HOME/.pranay2/.claude/settings.json"
-cp config/claude-settings-primary.json "$HOME/.dep1/.claude/settings.json"
-cp config/claude-settings-secondary.json "$HOME/.dep2/.claude/settings.json"
-chmod 600 "$HOME/.claude/settings.json" \
-          "$HOME/.pranay2/.claude/settings.json" \
-          "$HOME/.dep1/.claude/settings.json" \
-          "$HOME/.dep2/.claude/settings.json"
-
-# 4. Create isolated passwd files for account 1 and account 2
-if [ ! -f "$HOME/.pranay1/passwd" ]; then
-    cp /etc/passwd "$HOME/.pranay1/passwd"
-    sed -i "s|^root:x:0:0:root:/root:|root:x:0:0:root:$HOME:|g" "$HOME/.pranay1/passwd"
-    sed -i "s|^root:x:0:0:root:/home/sayooj:|root:x:0:0:root:$HOME:|g" "$HOME/.pranay1/passwd"
-    echo "✔ Configured isolated passwd file for Account 1"
-fi
-
-for account_home in "$HOME/.dep1" "$HOME/.dep2"; do
-    if [ ! -f "$account_home/passwd" ]; then
-        cp /etc/passwd "$account_home/passwd"
-        sed -i "s|^root:x:0:0:root:/root:|root:x:0:0:root:$account_home:|g" "$account_home/passwd"
-        echo "✔ Configured passwd file for $account_home"
-    fi
-
-    if [ ! -e "$account_home/.ssh" ]; then
-        ln -s "$HOME/.ssh" "$account_home/.ssh"
-    fi
+# Create isolated Claude homes and install permission templates. Authentication
+# is deliberately not stored in the repository; each isolated account can be
+# authenticated after installation.
+account_homes=("$HOME/.pranay1" "$HOME/.pranay2" "$HOME/.dep1" "$HOME/.dep2")
+mkdir -p "$HOME/.claude"
+for account_home in "${account_homes[@]}"; do
+    mkdir -p "$account_home/.claude"
+    chmod 0700 "$account_home"
 done
 
-if [ ! -f "$HOME/.pranay2/passwd" ]; then
-    cp /etc/passwd "$HOME/.pranay2/passwd"
-    sed -i "s|^root:x:0:0:root:/root:|root:x:0:0:root:$HOME/.pranay2:|g" "$HOME/.pranay2/passwd"
-    sed -i "s|^root:x:0:0:root:/home/sayooj:|root:x:0:0:root:$HOME/.pranay2:|g" "$HOME/.pranay2/passwd"
-    echo "✔ Configured isolated passwd file for Account 2"
-fi
+install_claude_settings() {
+    local source=$1 target=$2
+    if [ -f "$target" ] && ! cmp -s "$source" "$target"; then
+        backup="$target.backup.$(date +%Y%m%d-%H%M%S)"
+        cp -a "$target" "$backup"
+        echo "Backed up existing settings to $backup"
+    fi
+    install -m 0600 "$source" "$target"
+}
 
-# 5. Create symlink for SSH credentials for account 2 if it doesn't exist
-if [ ! -e "$HOME/.pranay2/.ssh" ]; then
-    ln -s "$HOME/.ssh" "$HOME/.pranay2/.ssh"
-    echo "✔ Created symlink for SSH credentials for Account 2"
-fi
+install_claude_settings "$SCRIPT_DIR/config/claude-settings-primary.json" "$HOME/.claude/settings.json"
+install_claude_settings "$SCRIPT_DIR/config/claude-settings-secondary.json" "$HOME/.pranay2/.claude/settings.json"
+install_claude_settings "$SCRIPT_DIR/config/claude-settings-primary.json" "$HOME/.dep1/.claude/settings.json"
+install_claude_settings "$SCRIPT_DIR/config/claude-settings-secondary.json" "$HOME/.dep2/.claude/settings.json"
 
-# 6. Install systemd user service
+create_passwd_view() {
+    local output=$1 root_home=$2
+    cp /etc/passwd "$output"
+    sed -i "s|^root:x:0:0:root:[^:]*:|root:x:0:0:root:$root_home:|" "$output"
+    chmod 0600 "$output"
+}
+
+create_passwd_view "$HOME/.pranay1/passwd" "$HOME"
+create_passwd_view "$HOME/.pranay2/passwd" "$HOME/.pranay2"
+create_passwd_view "$HOME/.dep1/passwd" "$HOME/.dep1"
+create_passwd_view "$HOME/.dep2/passwd" "$HOME/.dep2"
+
+for account_home in "$HOME/.pranay2" "$HOME/.dep1" "$HOME/.dep2"; do
+    [ -e "$account_home/.ssh" ] || ln -s "$HOME/.ssh" "$account_home/.ssh"
+done
+
+# CODEX_HOME is the supported isolation boundary. Copy the current global
+# config/auth/skills/plugins once while keeping sessions and runtime state new.
+GPU_MIRROR_LOCAL_HOME="$HOME" "$HOME/bin/init-server-codex"
+
 mkdir -p "$HOME/.config/systemd/user"
-cp systemd/mount-pranay.service "$HOME/.config/systemd/user/mount-pranay.service"
-cp systemd/mount-dep.service "$HOME/.config/systemd/user/mount-dep.service"
-cp systemd/claude-mount-health.service "$HOME/.config/systemd/user/claude-mount-health.service"
-cp systemd/claude-mount-health.timer "$HOME/.config/systemd/user/claude-mount-health.timer"
-cp systemd/claude-mount-pranay-home.service "$HOME/.config/systemd/user/claude-mount-pranay-home.service"
-cp systemd/claude-mount-pranay-data.service "$HOME/.config/systemd/user/claude-mount-pranay-data.service"
-cp systemd/claude-mount-dep-home.service "$HOME/.config/systemd/user/claude-mount-dep-home.service"
-cp systemd/claude-mount-dep-data.service "$HOME/.config/systemd/user/claude-mount-dep-data.service"
+units=(
+    claude-mount-pranay-home.service
+    claude-mount-pranay-data.service
+    claude-mount-dep-home.service
+    claude-mount-dep-data.service
+    claude-mount-health.service
+    claude-mount-health.timer
+    mount-pranay.service
+    mount-dep.service
+)
+for unit in "${units[@]}"; do
+    install -m 0644 "$SCRIPT_DIR/systemd/$unit" "$HOME/.config/systemd/user/$unit"
+done
 
-# Enable lingering so service runs at boot without active sessions
-loginctl enable-linger "$(whoami)" 2>/dev/null || echo "⚠️ Could not enable linger automatically (requires loginctl permission)."
+mkdir -p "$HOME/machines"
+shortcut="$HOME/machines/dep"
+if [ ! -e "$shortcut" ] && [ ! -L "$shortcut" ]; then
+    ln -s /home/mauajama/Sayooj "$shortcut"
+elif [ ! -L "$shortcut" ] || [ "$(readlink "$shortcut")" != /home/mauajama/Sayooj ]; then
+    echo "WARNING: $shortcut already exists and was left unchanged." >&2
+fi
 
-# Start and enable the mount service
-systemctl --user daemon-reload || true
-systemctl --user disable --now mount-pranay.service mount-dep.service || true
-systemctl --user enable claude-mount-pranay-home.service || true
-systemctl --user enable claude-mount-pranay-data.service || true
-systemctl --user enable claude-mount-dep-home.service || true
-systemctl --user enable claude-mount-dep-data.service || true
-systemctl --user enable claude-mount-health.timer || true
-systemctl --user start claude-mount-pranay-home.service || true
-systemctl --user start claude-mount-pranay-data.service || true
-systemctl --user start claude-mount-dep-home.service || true
-systemctl --user start claude-mount-dep-data.service || true
-systemctl --user start claude-mount-health.timer || true
+if ! loginctl enable-linger "$(id -un)" 2>/dev/null; then
+    echo "WARNING: lingering was not enabled. For boot-before-login startup run:" >&2
+    echo "  sudo loginctl enable-linger $(id -un)" >&2
+fi
 
-echo "✔ Installed systemd automount service"
-echo ""
-echo "=== Installation Completed Successfully! ==="
-echo "You can now run:"
-echo "  - 'pranay-claude': Run Claude Code (account 1)"
-echo "  - 'pranay-claude1': Alias for pranay-claude"
-echo "  - 'pranay-claude2': Run Claude Code (account 2)"
-echo "  - 'dep-claude1': Run Claude Code on dep (account 1)"
-echo "  - 'dep-claude2': Run Claude Code on dep (account 2)"
-echo "  - 'pranay-codex': Run isolated Codex for pranaysir"
-echo "  - 'dep-codex': Run isolated Codex for dep"
+systemctl --user daemon-reload
+systemctl --user disable --now mount-pranay.service mount-dep.service >/dev/null 2>&1 || true
+systemctl --user enable --now claude-mount-pranay-home.service
+systemctl --user enable --now claude-mount-pranay-data.service
+systemctl --user enable --now claude-mount-dep-home.service
+systemctl --user enable --now claude-mount-dep-data.service
+systemctl --user enable --now claude-mount-health.timer
+
+echo
+echo "=== Verifying installed framework ==="
+"$HOME/bin/framework-doctor"
+
+echo
+echo "Installation complete. Authenticate any Claude account that is not already signed in:"
+echo "  pranay-claude auth"
+echo "  pranay-claude2 auth"
+echo "  dep-claude1 auth"
+echo "  dep-claude2 auth"
+echo
+echo "Launchers: pranay-claude[1|2], dep-claude[1|2], pranay-codex, dep-codex"

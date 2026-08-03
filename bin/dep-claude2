@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+export GPU_MIRROR_LOCAL_HOME="${GPU_MIRROR_LOCAL_HOME:-$HOME}"
+LOCAL_HOME="$GPU_MIRROR_LOCAL_HOME"
+
 if [ -z "${IN_DEP_NAMESPACE:-}" ]; then
     export IN_DEP_NAMESPACE=1
     exec unshare -m -r "$0" "$@"
@@ -8,10 +11,10 @@ fi
 
 mount --make-rprivate /
 
-export HOME="/home/sayooj/.dep2"
+export HOME="$LOCAL_HOME/.dep2"
 export SHELL="/bin/bash"
 export CLAUDE_CODE_SHELL="/bin/bash"
-export PATH="/home/sayooj/.local/bin:/home/sayooj/bin:$PATH"
+export PATH="$LOCAL_HOME/.local/bin:$LOCAL_HOME/bin:$PATH"
 
 current_dir=$(pwd -P 2>/dev/null || true)
 case "$current_dir" in
@@ -27,5 +30,5 @@ for hidden_path in /home/mauajama/Sayooj_y /data/mauajama/Sayooj_y; do
 done
 
 mount --bind "$HOME/passwd" /etc/passwd
-mount --bind "/home/sayooj/bin/gpu-shell-dep" /bin/bash
+mount --bind "$LOCAL_HOME/bin/gpu-shell-dep" /bin/bash
 exec claude --settings "$HOME/.claude/settings.json" "$@"

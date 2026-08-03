@@ -1,2 +1,2 @@
 #!/bin/bash
-exec /home/sayooj/bin/pranay-claude "$@"
+exec "$(dirname "$0")/pranay-claude" "$@"
