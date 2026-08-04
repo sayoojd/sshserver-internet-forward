@@ -1,7 +1,12 @@
 #!/bin/sh
 set -eu
 
-LOCAL_DIR=$(pwd -P)
+# Avoid getcwd() on a detached FUSE cwd; the launcher records this canonical
+# path before the agent starts.
+LOCAL_DIR=${GPU_MIRROR_REMOTE_CWD:-}
+if [ -z "$LOCAL_DIR" ]; then
+    LOCAL_DIR=$(pwd -P)
+fi
 
 case "$LOCAL_DIR" in
     /home/mauajama/Sayooj_y|/home/mauajama/Sayooj_y/*|\

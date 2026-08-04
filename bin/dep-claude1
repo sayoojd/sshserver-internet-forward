@@ -6,10 +6,12 @@ LOCAL_HOME="$GPU_MIRROR_LOCAL_HOME"
 
 if [ -z "${IN_DEP_NAMESPACE:-}" ]; then
     export IN_DEP_NAMESPACE=1
-    exec unshare -m -r "$0" "$@"
+    exec unshare -m -r --propagation slave "$0" "$@"
 fi
 
-mount --make-rprivate /
+# Receive host SSHFS unmount/remount events without propagating this session's
+# hidden-path overlays back to the host or to another agent namespace.
+mount --make-rslave /
 
 export HOME="$LOCAL_HOME/.dep1"
 export SHELL="/bin/bash"
@@ -22,6 +24,7 @@ case "$current_dir" in
     /mnt/DATA/mauajama/Sayooj|/mnt/DATA/mauajama/Sayooj/*) ;;
     *) cd /home/mauajama/Sayooj ;;
 esac
+export GPU_MIRROR_REMOTE_CWD=$(pwd -P)
 
 for hidden_path in /home/mauajama/Sayooj_y /data/mauajama/Sayooj_y; do
     if [ -d "$hidden_path" ]; then

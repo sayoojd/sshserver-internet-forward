@@ -6,11 +6,12 @@ LOCAL_HOME="$GPU_MIRROR_LOCAL_HOME"
 
 if [ -z "${IN_PRANAY_NAMESPACE:-}" ]; then
     export IN_PRANAY_NAMESPACE=1
-    exec unshare -m -r "$0" "$@"
+    exec unshare -m -r --propagation slave "$0" "$@"
 fi
 
-# Prevent mount changes in this Claude session from propagating to the host.
-mount --make-rprivate /
+# Receive host SSHFS unmount/remount events without propagating this session's
+# hidden-path overlays back to the host or to another agent namespace.
+mount --make-rslave /
 
 export HOME="$LOCAL_HOME"
 export SHELL="/bin/bash"
@@ -23,6 +24,7 @@ case "$current_dir" in
     /data/mauajama/Sayooj_y|/data/mauajama/Sayooj_y/*) ;;
     *) cd /home/mauajama/Sayooj_y ;;
 esac
+export GPU_MIRROR_REMOTE_CWD=$(pwd -P)
 
 # Hide dep files from this private mount namespace. Host mounts stay active.
 for hidden_path in /home/mauajama/Sayooj /mnt/DATA/mauajama/Sayooj; do

@@ -33,6 +33,8 @@ because command routing depends on them being identical locally and remotely.
 - `claude2` as a second, fully local Claude account with isolated configuration
   and history but the normal workstation filesystem and shell.
 - Private mount namespaces that hide the other server from each agent session.
+- One-way mount propagation so running agents receive recovered SSHFS mounts
+  without leaking their namespace-only overlays back to the workstation.
 - Bash routing to the correct SSH host while preserving the absolute cwd.
 - A narrowly validated permission hook for read-only `tail -f | grep` monitors.
 - `/home/<local-user>/machines/dep` as a shortcut to the Dep home mount.
@@ -233,6 +235,18 @@ Each launcher enters an unprivileged private mount namespace:
 - Pranay sessions see the two Pranay mounts and similarly hide both Dep mounts.
 - These overlays exist only inside that launcher process tree. They never
   unmount or hide paths from the host or another tmux session.
+- The namespaces are recursive slaves of the host mount tree. Host-side SSHFS
+  unmount/remount events therefore flow into already-running agents, while
+  namespace changes cannot flow in the opposite direction. This prevents a
+  recovered host mount from leaving a long-running agent attached to a stale
+  `ENOTCONN` FUSE endpoint.
+- The health timer preserves an active SSHFS process when a short read probe
+  fails, allowing SSHFS's own reconnect loop to retain the original FUSE mount
+  and every process cwd inside it. It replaces a mount only when the owning
+  systemd service is genuinely inactive or failed.
+- Launchers capture the canonical remote cwd before the agent starts. Shell
+  routers use that stable value instead of calling `getcwd()` on a potentially
+  detached FUSE cwd.
 - The shell router refuses execution unless cwd belongs to the selected
   server, then executes the command over the matching SSH alias.
 
@@ -249,6 +263,11 @@ Run the complete check at any time:
 ```bash
 framework-doctor
 ```
+
+The doctor verifies both prerequisites for reconnect survival: a shared host
+mount tree and launchers configured with one-way slave propagation. Sessions
+started with an older private-propagation launcher must be exited and resumed
+once; propagation mode cannot be retrofitted onto their detached mount trees.
 
 Useful focused checks:
 

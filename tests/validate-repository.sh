@@ -21,6 +21,30 @@ for settings in config/*.json; do
     python3 -m json.tool "$settings" >/dev/null
 done
 
+namespace_launchers=(
+    bin/dep-claude1 bin/dep-claude2
+    bin/pranay-claude bin/pranay-claude2
+    bin/dep-codex bin/pranay-codex
+)
+for launcher in "${namespace_launchers[@]}"; do
+    grep -q -- '--propagation slave' "$launcher"
+    grep -q -- 'mount --make-rslave /' "$launcher"
+    if grep -q -- 'mount --make-rprivate /' "$launcher"; then
+        echo "Reconnect-unsafe private propagation found in $launcher" >&2
+        exit 1
+    fi
+    grep -q -- 'GPU_MIRROR_REMOTE_CWD' "$launcher"
+done
+
+for router in bin/gpu-shell-dep bin/gpu-shell-pranay bin/gpu-shell-codex-dep bin/gpu-shell-codex-pranay; do
+    grep -q -- 'GPU_MIRROR_REMOTE_CWD' "$router"
+done
+
+if grep -q -- 'systemctl --user restart' bin/check-claude-mounts; then
+    echo "Health checker must not replace an active reconnecting SSHFS mount" >&2
+    exit 1
+fi
+
 if grep -R -n --exclude-dir=.git --exclude=README.md \
     --exclude=validate-repository.sh '/home/sayooj' .; then
     echo "Hardcoded workstation home found outside documentation." >&2

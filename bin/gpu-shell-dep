@@ -1,7 +1,13 @@
 #!/bin/sh
 set -eu
 
-LOCAL_DIR=$(pwd -P)
+# The launcher captures the canonical workspace before an outage. Prefer that
+# stable value: calling getcwd() on a detached FUSE cwd can itself return
+# ENOTCONN even after a replacement mount is visible at the absolute path.
+LOCAL_DIR=${GPU_MIRROR_REMOTE_CWD:-}
+if [ -z "$LOCAL_DIR" ]; then
+    LOCAL_DIR=$(pwd -P)
+fi
 
 case "$LOCAL_DIR" in
     /home/mauajama/Sayooj|/home/mauajama/Sayooj/*|\

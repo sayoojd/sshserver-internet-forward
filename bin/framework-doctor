@@ -16,7 +16,7 @@ else
     pass "running as non-root user $(id -un)"
 fi
 
-for command_name in ssh sshfs fusermount3 unshare mount mountpoint timeout python3 systemctl; do
+for command_name in ssh sshfs fusermount3 unshare mount mountpoint findmnt timeout python3 systemctl; do
     if command -v "$command_name" >/dev/null 2>&1; then
         pass "$command_name available"
     else
@@ -29,6 +29,18 @@ if unshare -Ur true >/dev/null 2>&1; then
 else
     fail "unprivileged user namespaces unavailable (unshare -Ur failed)"
 fi
+
+if unshare -m -r --propagation slave true >/dev/null 2>&1; then
+    pass "one-way slave mount namespaces available"
+else
+    fail "one-way slave mount namespaces unavailable"
+fi
+
+root_propagation=$(findmnt -n -o PROPAGATION / 2>/dev/null || true)
+case "$root_propagation" in
+    *shared*) pass "host mount tree supports propagation into agent namespaces" ;;
+    *) fail "host root mount is '$root_propagation', not shared; recovered SSHFS mounts cannot propagate into running agents" ;;
+esac
 
 for alias_name in dep pranaysir; do
     if ssh -o BatchMode=yes -o ConnectTimeout=10 -T "$alias_name" true </dev/null >/dev/null 2>&1; then
@@ -96,6 +108,19 @@ if [ "$mode" != "--pre-install" ]; then
             pass "launcher installed: $launcher"
         else
             fail "launcher missing from PATH: $launcher"
+        fi
+    done
+
+    namespace_launchers=(dep-claude1 dep-claude2 pranay-claude pranay-claude2 dep-codex pranay-codex)
+    for launcher in "${namespace_launchers[@]}"; do
+        launcher_path=$(command -v "$launcher" 2>/dev/null || true)
+        if [ -n "$launcher_path" ] &&
+           grep -q -- '--propagation slave' "$launcher_path" &&
+           grep -q -- 'mount --make-rslave /' "$launcher_path" &&
+           ! grep -q -- 'mount --make-rprivate /' "$launcher_path"; then
+            pass "reconnect-safe mount propagation: $launcher"
+        else
+            fail "launcher lacks reconnect-safe mount propagation: $launcher"
         fi
     done
 
