@@ -7,7 +7,7 @@ StartLimitIntervalSec=0
 [Service]
 Type=simple
 ExecStart=%h/bin/sshfs-mount dep:/mnt/DATA/mauajama/Sayooj /mnt/DATA/mauajama/Sayooj
-ExecStop=-/bin/fusermount3 -u /mnt/DATA/mauajama/Sayooj
+ExecStop=-/bin/fusermount3 -uz /mnt/DATA/mauajama/Sayooj
 Restart=on-failure
 RestartSec=15
 TimeoutStartSec=30

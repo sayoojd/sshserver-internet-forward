@@ -247,6 +247,8 @@ Each launcher enters an unprivileged private mount namespace:
 - Launchers capture the canonical remote cwd before the agent starts. Shell
   routers use that stable value instead of calling `getcwd()` on a potentially
   detached FUSE cwd.
+- If an SSHFS process genuinely dies, its systemd unit lazily detaches the dead
+  endpoint before replacement; this avoids a busy mount blocking recovery.
 - The shell router refuses execution unless cwd belongs to the selected
   server, then executes the command over the matching SSH alias.
 

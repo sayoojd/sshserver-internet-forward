@@ -7,7 +7,7 @@ StartLimitIntervalSec=0
 [Service]
 Type=simple
 ExecStart=%h/bin/sshfs-mount pranaysir:/home/mauajama/Sayooj_y /home/mauajama/Sayooj_y
-ExecStop=-/bin/fusermount3 -u /home/mauajama/Sayooj_y
+ExecStop=-/bin/fusermount3 -uz /home/mauajama/Sayooj_y
 Restart=on-failure
 RestartSec=15
 TimeoutStartSec=30

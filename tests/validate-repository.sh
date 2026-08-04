@@ -45,6 +45,10 @@ if grep -q -- 'systemctl --user restart' bin/check-claude-mounts; then
     exit 1
 fi
 
+for unit in systemd/claude-mount-*-home.service systemd/claude-mount-*-data.service; do
+    grep -q -- 'ExecStop=-/bin/fusermount3 -uz ' "$unit"
+done
+
 if grep -R -n --exclude-dir=.git --exclude=README.md \
     --exclude=validate-repository.sh '/home/sayooj' .; then
     echo "Hardcoded workstation home found outside documentation." >&2
