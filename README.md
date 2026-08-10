@@ -242,6 +242,21 @@ previous memory files; disabling use prevents those files from being injected
 into new sessions. Restart or resume an agent after installation so it loads
 the new setting.
 
+### Tool permission policy
+
+All Claude profiles pre-approve `Bash(*)` and `Artifact`. The Artifact rule
+allows Claude to publish HTML or Markdown pages to the account's private area
+on claude.ai without another tool prompt. Publishing still uploads the selected
+file to Anthropic-operated infrastructure; public sharing remains a separate
+account-side action.
+
+All Codex profiles use `approval_policy = "never"` with
+`sandbox_mode = "danger-full-access"`. The Dep and Pranay launchers repeat
+those values as command-line overrides, and installation repairs them in each
+Codex config. These settings allow shell execution without approval prompts;
+they do not provide a Claude Artifact tool because Codex has no equivalent
+Claude-specific publisher.
+
 Starting a launcher outside its allowed roots moves it to that server's home
 project root. Starting it inside either allowed root preserves the current
 subdirectory. This also avoids stale-cwd failures after an SSHFS reconnect.

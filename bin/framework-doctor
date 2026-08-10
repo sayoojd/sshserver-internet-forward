@@ -147,11 +147,14 @@ with open(sys.argv[1], encoding="utf-8") as handle:
 
 assert settings.get("autoMemoryEnabled") is False
 assert settings.get("env", {}).get("CLAUDE_CODE_DISABLE_AUTO_MEMORY") == "1"
+allowed = settings.get("permissions", {}).get("allow", [])
+assert "Bash(*)" in allowed
+assert "Artifact" in allowed
 PY
         then
-            pass "Claude auto memory disabled: $settings_file"
+            pass "Claude memory off and Bash/Artifact allowed: $settings_file"
         else
-            fail "Claude auto memory is not fully disabled: $settings_file"
+            fail "Claude memory or permission policy is incomplete: $settings_file"
         fi
     done
 
@@ -171,11 +174,13 @@ with open(sys.argv[1], "rb") as handle:
 memories = config.get("memories", {})
 assert memories.get("generate_memories") is False
 assert memories.get("use_memories") is False
+assert config.get("approval_policy") == "never"
+assert config.get("sandbox_mode") == "danger-full-access"
 PY
         then
-            pass "Codex memory generation and injection disabled: $config_file"
+            pass "Codex memory off and command execution pre-approved: $config_file"
         else
-            fail "Codex cross-session memory is not fully disabled: $config_file"
+            fail "Codex memory or permission policy is incomplete: $config_file"
         fi
     done
 
@@ -191,11 +196,13 @@ PY
     for launcher in dep-codex pranay-codex; do
         launcher_path=$(command -v "$launcher" 2>/dev/null || true)
         if [ -n "$launcher_path" ] &&
+           grep -q 'approval_policy=never' "$launcher_path" &&
+           grep -q 'sandbox_mode=danger-full-access' "$launcher_path" &&
            grep -q 'memories.generate_memories=false' "$launcher_path" &&
            grep -q 'memories.use_memories=false' "$launcher_path"; then
-            pass "Codex launcher forces cross-session memory off: $launcher"
+            pass "Codex launcher forces permissions and cross-session memory off: $launcher"
         else
-            fail "Codex launcher does not force cross-session memory off: $launcher"
+            fail "Codex launcher does not force permissions and memory policy: $launcher"
         fi
     done
 

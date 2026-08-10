@@ -28,6 +28,9 @@ with open(sys.argv[1], encoding="utf-8") as handle:
 
 assert data.get("autoMemoryEnabled") is False
 assert data.get("env", {}).get("CLAUDE_CODE_DISABLE_AUTO_MEMORY") == "1"
+allowed = data.get("permissions", {}).get("allow", [])
+assert "Bash(*)" in allowed
+assert "Artifact" in allowed
 PY
 done
 
@@ -36,12 +39,16 @@ for launcher in bin/claude2 bin/dep-claude1 bin/dep-claude2 bin/pranay-claude bi
 done
 
 for launcher in bin/dep-codex bin/pranay-codex; do
+    grep -q -- 'approval_policy=never' "$launcher"
+    grep -q -- 'sandbox_mode=danger-full-access' "$launcher"
     grep -q -- 'memories.generate_memories=false' "$launcher"
     grep -q -- 'memories.use_memories=false' "$launcher"
 done
 
 grep -q -- 'ensure-codex-memory-off' bin/init-server-codex
 grep -q -- 'ensure-codex-memory-off' install.sh
+grep -q -- 'ensure-codex-permissions' bin/init-server-codex
+grep -q -- 'ensure-codex-permissions' install.sh
 
 namespace_launchers=(
     bin/dep-claude1 bin/dep-claude2

@@ -1,0 +1,62 @@
+#!/bin/bash
+set -euo pipefail
+
+[ "$#" -eq 1 ] || {
+    echo "Usage: ensure-codex-permissions <config.toml>" >&2
+    exit 64
+}
+
+config_file=$1
+[ -f "$config_file" ] || {
+    echo "Missing Codex config: $config_file" >&2
+    exit 1
+}
+
+config_dir=$(dirname "$config_file")
+temp_file=$(mktemp "$config_dir/.config.toml.permissions.XXXXXX")
+cleanup() { [ ! -e "$temp_file" ] || unlink "$temp_file"; }
+trap cleanup EXIT
+
+awk '
+BEGIN {
+    in_top_level = 1
+    saw_approval = 0
+    saw_sandbox = 0
+}
+
+function finish_top_level() {
+    if (!saw_approval) print "approval_policy = \"never\""
+    if (!saw_sandbox) print "sandbox_mode = \"danger-full-access\""
+}
+
+in_top_level && /^[[:space:]]*approval_policy[[:space:]]*=/ {
+    if (!saw_approval) print "approval_policy = \"never\""
+    saw_approval = 1
+    next
+}
+
+in_top_level && /^[[:space:]]*sandbox_mode[[:space:]]*=/ {
+    if (!saw_sandbox) print "sandbox_mode = \"danger-full-access\""
+    saw_sandbox = 1
+    next
+}
+
+/^[[:space:]]*\[[^]]+\][[:space:]]*$/ {
+    if (in_top_level) {
+        finish_top_level()
+        in_top_level = 0
+    }
+    print
+    next
+}
+
+{ print }
+
+END {
+    if (in_top_level) finish_top_level()
+}
+' "$config_file" > "$temp_file"
+
+chmod --reference="$config_file" "$temp_file"
+mv -f "$temp_file" "$config_file"
+trap - EXIT

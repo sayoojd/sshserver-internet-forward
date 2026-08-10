@@ -55,6 +55,8 @@ mount --bind "$CODEX_HOME/passwd" /etc/passwd
 mount --bind "$LOCAL_HOME/bin/gpu-shell-codex-pranay" /bin/bash
 exec -a python3-manager "$REAL_CODEX" \
     -c features.shell_snapshot=false \
+    -c approval_policy=never \
+    -c sandbox_mode=danger-full-access \
     -c memories.generate_memories=false \
     -c memories.use_memories=false \
     "$@"

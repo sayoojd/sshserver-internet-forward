@@ -23,7 +23,8 @@ scripts=(
     pranay-codex dep-codex
     gpu-shell-codex-pranay gpu-shell-codex-dep
     mount-pranay mount-dep sshfs-mount check-claude-mounts
-    claude-allow-log-monitor ensure-codex-memory-off init-server-codex framework-doctor
+    claude-allow-log-monitor ensure-codex-memory-off ensure-codex-permissions
+    init-server-codex framework-doctor
 )
 for script_name in "${scripts[@]}"; do
     install -m 0755 "$SCRIPT_DIR/bin/$script_name" "$HOME/bin/$script_name"
@@ -81,6 +82,7 @@ done
 # CODEX_HOME is the supported isolation boundary. Copy the current global
 # config/auth/skills/plugins once while keeping sessions and runtime state new.
 "$HOME/bin/ensure-codex-memory-off" "$HOME/.codex/config.toml"
+"$HOME/bin/ensure-codex-permissions" "$HOME/.codex/config.toml"
 GPU_MIRROR_LOCAL_HOME="$HOME" "$HOME/bin/init-server-codex"
 
 mkdir -p "$HOME/.config/systemd/user"
