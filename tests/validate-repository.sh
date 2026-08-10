@@ -19,7 +19,29 @@ done
 
 for settings in config/*.json; do
     python3 -m json.tool "$settings" >/dev/null
+    python3 - "$settings" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    data = json.load(handle)
+
+assert data.get("autoMemoryEnabled") is False
+assert data.get("env", {}).get("CLAUDE_CODE_DISABLE_AUTO_MEMORY") == "1"
+PY
 done
+
+for launcher in bin/claude2 bin/dep-claude1 bin/dep-claude2 bin/pranay-claude bin/pranay-claude2; do
+    grep -q -- 'CLAUDE_CODE_DISABLE_AUTO_MEMORY=1' "$launcher"
+done
+
+for launcher in bin/dep-codex bin/pranay-codex; do
+    grep -q -- 'memories.generate_memories=false' "$launcher"
+    grep -q -- 'memories.use_memories=false' "$launcher"
+done
+
+grep -q -- 'ensure-codex-memory-off' bin/init-server-codex
+grep -q -- 'ensure-codex-memory-off' install.sh
 
 namespace_launchers=(
     bin/dep-claude1 bin/dep-claude2

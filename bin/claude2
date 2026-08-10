@@ -19,4 +19,5 @@ CLAUDE_BIN="$LOCAL_HOME/.local/bin/claude"
 }
 
 export CLAUDE_CONFIG_DIR="$CONFIG_DIR"
+export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 exec "$CLAUDE_BIN" "$@"

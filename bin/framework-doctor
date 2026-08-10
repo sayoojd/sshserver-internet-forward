@@ -130,6 +130,75 @@ if [ "$mode" != "--pre-install" ]; then
         fail "isolated local Claude account incomplete: $HOME/.claude2"
     fi
 
+    claude_memory_profiles=(
+        "$HOME/.claude/settings.json"
+        "$HOME/.claude2/settings.json"
+        "$HOME/.pranay2/.claude/settings.json"
+        "$HOME/.dep1/.claude/settings.json"
+        "$HOME/.dep2/.claude/settings.json"
+    )
+    for settings_file in "${claude_memory_profiles[@]}"; do
+        if python3 - "$settings_file" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as handle:
+    settings = json.load(handle)
+
+assert settings.get("autoMemoryEnabled") is False
+assert settings.get("env", {}).get("CLAUDE_CODE_DISABLE_AUTO_MEMORY") == "1"
+PY
+        then
+            pass "Claude auto memory disabled: $settings_file"
+        else
+            fail "Claude auto memory is not fully disabled: $settings_file"
+        fi
+    done
+
+    codex_memory_profiles=(
+        "$HOME/.codex/config.toml"
+        "$HOME/.codex-dep/config.toml"
+        "$HOME/.codex-pranay/config.toml"
+    )
+    for config_file in "${codex_memory_profiles[@]}"; do
+        if python3 - "$config_file" <<'PY'
+import sys
+import tomllib
+
+with open(sys.argv[1], "rb") as handle:
+    config = tomllib.load(handle)
+
+memories = config.get("memories", {})
+assert memories.get("generate_memories") is False
+assert memories.get("use_memories") is False
+PY
+        then
+            pass "Codex memory generation and injection disabled: $config_file"
+        else
+            fail "Codex cross-session memory is not fully disabled: $config_file"
+        fi
+    done
+
+    for launcher in claude2 dep-claude1 dep-claude2 pranay-claude pranay-claude2; do
+        launcher_path=$(command -v "$launcher" 2>/dev/null || true)
+        if [ -n "$launcher_path" ] && grep -q 'CLAUDE_CODE_DISABLE_AUTO_MEMORY=1' "$launcher_path"; then
+            pass "Claude launcher forces auto memory off: $launcher"
+        else
+            fail "Claude launcher does not force auto memory off: $launcher"
+        fi
+    done
+
+    for launcher in dep-codex pranay-codex; do
+        launcher_path=$(command -v "$launcher" 2>/dev/null || true)
+        if [ -n "$launcher_path" ] &&
+           grep -q 'memories.generate_memories=false' "$launcher_path" &&
+           grep -q 'memories.use_memories=false' "$launcher_path"; then
+            pass "Codex launcher forces cross-session memory off: $launcher"
+        else
+            fail "Codex launcher does not force cross-session memory off: $launcher"
+        fi
+    done
+
     units=(
         claude-mount-dep-home.service
         claude-mount-dep-data.service

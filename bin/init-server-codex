@@ -30,6 +30,8 @@ initialize_home() {
         chmod 600 "$target/config.toml"
     fi
 
+    "$LOCAL_HOME/bin/ensure-codex-memory-off" "$target/config.toml"
+
     if [ ! -e "$target/auth.json" ]; then
         cp "$SOURCE_HOME/auth.json" "$target/auth.json"
         chmod 600 "$target/auth.json"

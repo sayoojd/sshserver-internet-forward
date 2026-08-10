@@ -53,4 +53,8 @@ REAL_CODEX="$LOCAL_HOME/.codex/packages/standalone/current/bin/codex"
 # replacing /bin/bash, otherwise the launcher itself would be sent over SSH.
 mount --bind "$CODEX_HOME/passwd" /etc/passwd
 mount --bind "$LOCAL_HOME/bin/gpu-shell-codex-dep" /bin/bash
-exec -a python3-manager "$REAL_CODEX" -c features.shell_snapshot=false "$@"
+exec -a python3-manager "$REAL_CODEX" \
+    -c features.shell_snapshot=false \
+    -c memories.generate_memories=false \
+    -c memories.use_memories=false \
+    "$@"

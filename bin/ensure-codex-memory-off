@@ -1,0 +1,74 @@
+#!/bin/bash
+set -euo pipefail
+
+[ "$#" -eq 1 ] || {
+    echo "Usage: ensure-codex-memory-off <config.toml>" >&2
+    exit 64
+}
+
+config_file=$1
+[ -f "$config_file" ] || {
+    echo "Missing Codex config: $config_file" >&2
+    exit 1
+}
+
+config_dir=$(dirname "$config_file")
+temp_file=$(mktemp "$config_dir/.config.toml.memory.XXXXXX")
+cleanup() { [ ! -e "$temp_file" ] || unlink "$temp_file"; }
+trap cleanup EXIT
+
+awk '
+BEGIN {
+    in_memories = 0
+    saw_memories = 0
+    saw_generate = 0
+    saw_use = 0
+}
+
+function finish_memories() {
+    if (!saw_generate) print "generate_memories = false"
+    if (!saw_use) print "use_memories = false"
+}
+
+/^[[:space:]]*\[[^]]+\][[:space:]]*$/ {
+    if (in_memories) {
+        finish_memories()
+        in_memories = 0
+    }
+    if ($0 ~ /^[[:space:]]*\[memories\][[:space:]]*$/) {
+        in_memories = 1
+        saw_memories = 1
+    }
+    print
+    next
+}
+
+in_memories && /^[[:space:]]*generate_memories[[:space:]]*=/ {
+    print "generate_memories = false"
+    saw_generate = 1
+    next
+}
+
+in_memories && /^[[:space:]]*use_memories[[:space:]]*=/ {
+    print "use_memories = false"
+    saw_use = 1
+    next
+}
+
+{ print }
+
+END {
+    if (in_memories) {
+        finish_memories()
+    } else if (!saw_memories) {
+        print ""
+        print "[memories]"
+        print "generate_memories = false"
+        print "use_memories = false"
+    }
+}
+' "$config_file" > "$temp_file"
+
+chmod --reference="$config_file" "$temp_file"
+mv -f "$temp_file" "$config_file"
+trap - EXIT

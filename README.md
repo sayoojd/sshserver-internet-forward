@@ -32,6 +32,9 @@ because command routing depends on them being identical locally and remotely.
 - `pranay-codex` and `dep-codex` with separate `CODEX_HOME` state.
 - `claude2` as a second, fully local Claude account with isolated configuration
   and history but the normal workstation filesystem and shell.
+- Cross-session auto memory disabled for every normal and isolated Claude and
+  Codex profile. Existing memory files are retained but are neither loaded nor
+  extended by new sessions.
 - Private mount namespaces that hide the other server from each agent session.
 - One-way mount propagation so running agents receive recovered SSHFS mounts
   without leaking their namespace-only overlays back to the workstation.
@@ -222,6 +225,23 @@ same way as the normal local `claude` command. The installer copies the normal
 settings template into the second account but never copies credentials,
 conversations, or runtime state.
 
+### Cross-session memory isolation
+
+All installed profiles disable automatic memory sharing between sessions:
+
+- Claude settings use `autoMemoryEnabled: false` and
+  `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`. Custom launchers also export the
+  environment variable as a non-project-overridable guard.
+- Codex settings use both `memories.generate_memories = false` and
+  `memories.use_memories = false`. The Dep and Pranay launchers repeat both as
+  command-line overrides.
+
+This applies to normal `claude`, local `claude2`, all four SSH-backed Claude
+launchers, normal `codex`, `dep-codex`, and `pranay-codex`. It does not delete
+previous memory files; disabling use prevents those files from being injected
+into new sessions. Restart or resume an agent after installation so it loads
+the new setting.
+
 Starting a launcher outside its allowed roots moves it to that server's home
 project root. Starting it inside either allowed root preserves the current
 subdirectory. This also avoids stale-cwd failures after an SSHFS reconnect.
@@ -321,7 +341,7 @@ fresh isolated Codex home from a newly changed global setup, move the existing
 | `install.sh` | Non-root preflight, deployment, services, and verification |
 | `prepare-mountpoints.sh` | One-time privileged creation of fixed mount paths |
 | `bin/*-claude*` | Claude namespace launchers and remote Bash routers |
-| `bin/*-codex*` | Codex launchers, routers, and isolated-home initializer |
+| `bin/*-codex*` | Codex launchers, routers, isolated-home initializer, and memory guard |
 | `bin/sshfs-mount` | PATH-independent foreground SSHFS service helper |
 | `bin/framework-doctor` | Read-only reproducibility and health audit |
 | `bin/check-claude-mounts` | Per-mount recovery used by the timer |

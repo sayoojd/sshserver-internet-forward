@@ -16,6 +16,7 @@ mount --make-rslave /
 export HOME="$LOCAL_HOME/.dep1"
 export SHELL="/bin/bash"
 export CLAUDE_CODE_SHELL="/bin/bash"
+export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 export PATH="$LOCAL_HOME/.local/bin:$LOCAL_HOME/bin:$PATH"
 
 current_dir=$(pwd -P 2>/dev/null || true)
