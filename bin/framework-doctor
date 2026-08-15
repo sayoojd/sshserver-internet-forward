@@ -150,6 +150,8 @@ assert settings.get("env", {}).get("CLAUDE_CODE_DISABLE_AUTO_MEMORY") == "1"
 allowed = settings.get("permissions", {}).get("allow", [])
 assert "Bash(*)" in allowed
 assert "Artifact" in allowed
+assert "Read(/jobs/**)" in allowed
+assert "Edit(/jobs/**)" in allowed
 required_roots = {
     "/home/mauajama/Sayooj",
     "/mnt/DATA/mauajama/Sayooj",
@@ -162,7 +164,7 @@ for root in required_roots:
     assert f"Read(//{root.lstrip('/')}/**)" in allowed
 PY
         then
-            pass "Claude memory off and mount reads/Bash/Artifact allowed: $settings_file"
+            pass "Claude memory off and mount/jobs/Bash/Artifact allowed: $settings_file"
         else
             fail "Claude memory or permission policy is incomplete: $settings_file"
         fi

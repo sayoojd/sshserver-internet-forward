@@ -6,12 +6,14 @@
   "permissions": {
     "allow": [
       "Read",
+      "Read(/jobs/**)",
       "Read(//home/mauajama/Sayooj/**)",
       "Read(//mnt/DATA/mauajama/Sayooj/**)",
       "Read(//home/mauajama/Sayooj_y/**)",
       "Read(//data/mauajama/Sayooj_y/**)",
       "Write",
       "Edit",
+      "Edit(/jobs/**)",
       "Glob",
       "Grep",
       "Bash(*)",

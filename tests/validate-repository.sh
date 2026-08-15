@@ -31,6 +31,8 @@ assert data.get("env", {}).get("CLAUDE_CODE_DISABLE_AUTO_MEMORY") == "1"
 allowed = data.get("permissions", {}).get("allow", [])
 assert "Bash(*)" in allowed
 assert "Artifact" in allowed
+assert "Read(/jobs/**)" in allowed
+assert "Edit(/jobs/**)" in allowed
 required_roots = {
     "/home/mauajama/Sayooj",
     "/mnt/DATA/mauajama/Sayooj",

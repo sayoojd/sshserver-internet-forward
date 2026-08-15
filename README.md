@@ -250,6 +250,12 @@ on claude.ai without another tool prompt. Publishing still uploads the selected
 file to Anthropic-operated infrastructure; public sharing remains a separate
 account-side action.
 
+Each profile also explicitly allows `Read(/jobs/**)` and `Edit(/jobs/**)`.
+Because `/` in a user or `--settings` permission rule is anchored at that
+profile's settings directory, these rules allow workflow scratch files only
+under the profile's own `.claude/jobs` tree without granting access to its
+credentials, settings, or conversation transcripts.
+
 The four managed Dep and Pranay mount roots are also listed under
 `permissions.additionalDirectories`, with matching absolute `Read(...)`
 allow rules. This lets recognized file-reading shell commands such as `tail`,
