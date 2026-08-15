@@ -6,6 +6,10 @@
   "permissions": {
     "allow": [
       "Read",
+      "Read(//home/mauajama/Sayooj/**)",
+      "Read(//mnt/DATA/mauajama/Sayooj/**)",
+      "Read(//home/mauajama/Sayooj_y/**)",
+      "Read(//data/mauajama/Sayooj_y/**)",
       "Write",
       "Edit",
       "Glob",
@@ -21,7 +25,13 @@
       "Agent"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "/home/mauajama/Sayooj",
+      "/mnt/DATA/mauajama/Sayooj",
+      "/home/mauajama/Sayooj_y",
+      "/data/mauajama/Sayooj_y"
+    ]
   },
   "hooks": {
     "PermissionRequest": [

@@ -250,6 +250,12 @@ on claude.ai without another tool prompt. Publishing still uploads the selected
 file to Anthropic-operated infrastructure; public sharing remains a separate
 account-side action.
 
+The four managed Dep and Pranay mount roots are also listed under
+`permissions.additionalDirectories`, with matching absolute `Read(...)`
+allow rules. This lets recognized file-reading shell commands such as `tail`,
+`head`, `cat`, and `grep` monitor files on the data mounts even when the Claude
+session started from the corresponding home-project mount.
+
 All Codex profiles use `approval_policy = "never"` with
 `sandbox_mode = "danger-full-access"`. The Dep and Pranay launchers repeat
 those values as command-line overrides, and installation repairs them in each

@@ -31,6 +31,16 @@ assert data.get("env", {}).get("CLAUDE_CODE_DISABLE_AUTO_MEMORY") == "1"
 allowed = data.get("permissions", {}).get("allow", [])
 assert "Bash(*)" in allowed
 assert "Artifact" in allowed
+required_roots = {
+    "/home/mauajama/Sayooj",
+    "/mnt/DATA/mauajama/Sayooj",
+    "/home/mauajama/Sayooj_y",
+    "/data/mauajama/Sayooj_y",
+}
+additional = set(data.get("permissions", {}).get("additionalDirectories", []))
+assert required_roots <= additional
+for root in required_roots:
+    assert f"Read(//{root.lstrip('/')}/**)" in allowed
 PY
 done
 
